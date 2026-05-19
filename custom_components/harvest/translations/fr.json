@@ -1,0 +1,11 @@
+{
+  "title": "HArvest",
+  "config": {
+    "step": {
+      "user": {
+        "title": "HArvest",
+        "description": "Récoltez et exportez toutes vos entités Home Assistant vers Excel, CSV ou JSON."
+      }
+    }
+  }
+}

@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HArvest</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh;display:flex;flex-direction:column}
+
+header{background:linear-gradient(135deg,#1e40af,#7c3aed);padding:14px 24px;display:flex;align-items:center;gap:12px;box-shadow:0 4px 20px rgba(0,0,0,.4)}
+header svg{width:30px;height:30px;flex-shrink:0}
+header h1{font-size:1.15rem;font-weight:700}
+header small{font-size:.75rem;opacity:.65;display:block;margin-top:1px}
+.auto-badge{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.chip{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:20px;padding:3px 10px;font-size:.72rem;white-space:nowrap}
+.chip.ok{background:rgba(16,185,129,.25);border-color:rgba(16,185,129,.5)}
+.chip.warn{background:rgba(245,158,11,.2);border-color:rgba(245,158,11,.4)}
+
+/* ── Sélecteur de langue ── */
+.lang-switch{display:flex;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:20px;overflow:hidden;flex-shrink:0}
+.lang-btn{padding:3px 10px;font-size:.72rem;font-weight:600;cursor:pointer;border:none;background:transparent;color:rgba(255,255,255,.6);transition:all .2s}
+.lang-btn.active{background:rgba(255,255,255,.25);color:#fff}
+
+.connect{background:#1e293b;border-bottom:1px solid #334155;padding:14px 24px;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
+.field{display:flex;flex-direction:column;gap:4px;flex:1;min-width:190px}
+.field label{font-size:.7rem;text-transform:uppercase;letter-spacing:.8px;color:#94a3b8}
+.field input{background:#0f172a;border:1px solid #334155;border-radius:8px;padding:7px 11px;color:#e2e8f0;font-size:.86rem;outline:none;transition:border-color .2s}
+.field input:focus{border-color:#6366f1}
+.field input[type=password]{letter-spacing:.1em}
+
+.btn{padding:7px 16px;border:none;border-radius:8px;font-size:.83rem;font-weight:600;cursor:pointer;transition:opacity .2s,transform .1s;white-space:nowrap}
+.btn:active{transform:scale(.97)}
+.btn:hover{opacity:.85}
+.btn-primary{background:#6366f1;color:#fff}
+.btn-success{background:#10b981;color:#fff}
+.btn-muted{background:#334155;color:#94a3b8}
+.btn-sm{padding:4px 11px;font-size:.76rem}
+.btn-save{background:#1e293b;border:1px solid #334155;color:#94a3b8}
+
+.status{padding:6px 24px;background:#0f172a;border-bottom:1px solid #1e293b;display:none;flex-wrap:wrap;gap:12px;align-items:center;font-size:.79rem}
+.badge{display:inline-flex;align-items:center;gap:5px;background:#1e293b;border-radius:20px;padding:2px 9px}
+.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.dg{background:#10b981}.dy{background:#f59e0b}.db{background:#3b82f6}.dr{background:#ef4444}
+.ts{color:#475569;font-size:.73rem}
+
+.toolbar{padding:10px 24px;background:#1e293b;display:none;flex-wrap:wrap;gap:8px;align-items:center;border-bottom:1px solid #334155}
+.toolbar input,.toolbar select{background:#0f172a;border:1px solid #334155;border-radius:8px;padding:6px 10px;color:#e2e8f0;font-size:.83rem;outline:none}
+.toolbar input:focus,.toolbar select:focus{border-color:#6366f1}
+#searchInput{width:210px}
+
+.colbar{padding:7px 24px;background:#0f172a;border-bottom:1px solid #1e293b;display:none;flex-wrap:wrap;gap:5px;align-items:center}
+.colbar .lbl{font-size:.7rem;color:#64748b;margin-right:2px}
+.ct{display:inline-block;background:#1e293b;border:1px solid #334155;border-radius:5px;padding:2px 8px;font-size:.73rem;cursor:pointer;color:#94a3b8;user-select:none;transition:all .15s}
+.ct.on{background:#312e81;border-color:#6366f1;color:#a5b4fc}
+
+.table-wrap{overflow:auto;flex:1;padding:0 24px 20px}
+table{width:100%;border-collapse:collapse;font-size:.82rem;margin-top:12px}
+thead th{background:#1e293b;padding:8px 10px;text-align:left;font-size:.7rem;text-transform:uppercase;letter-spacing:.7px;color:#94a3b8;position:sticky;top:0;z-index:10;cursor:pointer;white-space:nowrap;border-bottom:2px solid #334155}
+thead th:hover{color:#e2e8f0}
+thead th.sorted{color:#a5b4fc}
+tbody tr{border-bottom:1px solid #1e293b;transition:background .1s}
+tbody tr:hover{background:#1e293b}
+tbody td{padding:7px 10px;vertical-align:top}
+
+.dom{display:inline-block;padding:2px 7px;border-radius:12px;font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+.sc{display:inline-block;padding:2px 8px;border-radius:12px;font-size:.75rem;font-weight:500}
+.s-on{background:#065f46;color:#6ee7b7}
+.s-off{background:#1f2937;color:#9ca3af}
+.s-unavailable{background:#450a0a;color:#fca5a5}
+.s-unknown{background:#1c1917;color:#a8a29e}
+.s-other{background:#1e3a5f;color:#93c5fd}
+.eid{font-family:monospace;font-size:.78rem;color:#818cf8}
+.atag{display:inline-block;background:#1e293b;border:1px solid #334155;border-radius:4px;padding:1px 5px;font-size:.68rem;margin:1px;color:#94a3b8;font-family:monospace;max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
+
+.d-light{background:#713f12;color:#fde68a}
+.d-switch{background:#1e3a5f;color:#93c5fd}
+.d-sensor{background:#064e3b;color:#6ee7b7}
+.d-binary_sensor{background:#312e81;color:#c4b5fd}
+.d-climate{background:#7c2d12;color:#fdba74}
+.d-cover{background:#3b0764;color:#d8b4fe}
+.d-media_player{background:#0c4a6e;color:#7dd3fc}
+.d-automation{background:#1a2e05;color:#86efac}
+.d-script{background:#14532d;color:#4ade80}
+.d-input_boolean{background:#4a044e;color:#f0abfc}
+.d-input_number{background:#0c4a6e;color:#7dd3fc}
+.d-input_select{background:#422006;color:#fb923c}
+.d-person{background:#1e1b4b;color:#a5b4fc}
+.d-weather{background:#082f49;color:#38bdf8}
+.d-zone{background:#042f2e;color:#2dd4bf}
+.d-alarm_control_panel{background:#450a0a;color:#f87171}
+.d-default{background:#1e293b;color:#94a3b8}
+
+.empty{text-align:center;padding:60px 20px;color:#475569}
+.empty svg{width:56px;height:56px;opacity:.22;margin-bottom:12px}
+.empty p{font-size:.92rem;margin-bottom:4px}
+.empty small{font-size:.78rem}
+.loading{display:none;text-align:center;padding:50px;color:#6366f1}
+.spin{width:36px;height:36px;border:3px solid #1e293b;border-top-color:#6366f1;border-radius:50%;animation:sp .7s linear infinite;margin:0 auto 12px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.errbox{display:none;background:#450a0a;border:1px solid #7f1d1d;border-radius:8px;padding:11px 15px;margin:14px 24px;color:#fca5a5;font-size:.83rem}
+
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#10b981;color:#fff;padding:8px 16px;border-radius:8px;font-size:.8rem;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.35);pointer-events:none}
+
+@media(max-width:660px){
+  .connect,.toolbar,.table-wrap,.status,.colbar{padding-left:10px;padding-right:10px}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+    <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+    <polyline points="9 22 9 12 15 12 15 22"/>
+  </svg>
+  <div>
+    <h1>HArvest</h1>
+    <small data-i18n="subtitle"></small>
+  </div>
+  <div class="auto-badge">
+    <div class="lang-switch">
+      <button class="lang-btn" id="btnFR" onclick="setLang('fr')">FR</button>
+      <button class="lang-btn" id="btnEN" onclick="setLang('en')">EN</button>
+    </div>
+    <span class="chip" id="authChip"></span>
+    <button class="btn btn-primary btn-sm" data-i18n="btn_load" onclick="loadEntities()"></button>
+  </div>
+</header>
+
+<div class="connect" id="connectPanel">
+  <div class="field" style="min-width:250px">
+    <label data-i18n="url_label"></label>
+    <input id="haUrl" type="text" data-i18n-placeholder="url_placeholder">
+  </div>
+  <div class="field" style="min-width:320px">
+    <label data-i18n="token_label"></label>
+    <input id="haToken" type="password" data-i18n-placeholder="token_placeholder">
+  </div>
+  <button class="btn btn-primary" data-i18n="btn_load" onclick="loadEntities()"></button>
+  <button class="btn btn-save btn-sm" onclick="saveCreds()" id="btnSave"></button>
+</div>
+
+<div class="status" id="statusBar">
+  <span class="badge" id="sTotal"><span class="dot db"></span>—</span>
+  <span class="badge" id="sVis"><span class="dot dg"></span>—</span>
+  <span class="badge" id="sOn"><span class="dot dg"></span>—</span>
+  <span class="badge" id="sOff"><span class="dot dy"></span>—</span>
+  <span class="badge" id="sUna"><span class="dot dr"></span>—</span>
+  <span class="ts" id="tsFetch"></span>
+  <div style="margin-left:auto;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+    <span id="exportCount" style="font-size:.73rem;color:#64748b;white-space:nowrap"></span>
+    <button class="btn btn-success btn-sm" data-i18n="btn_excel_filtered" onclick="exportExcel('filtered')"></button>
+    <button class="btn btn-success btn-sm" style="background:#059669" data-i18n="btn_excel_all" onclick="exportExcel('all')"></button>
+    <button class="btn btn-muted btn-sm" onclick="exportCSV()">📄 CSV</button>
+    <button class="btn btn-muted btn-sm" onclick="exportJSON()">{ } JSON</button>
+  </div>
+</div>
+
+<div class="toolbar" id="toolbar">
+  <input id="searchInput" type="text" data-i18n-placeholder="search_placeholder" oninput="applyFilters()">
+  <select id="domainFilter" onchange="applyFilters()"></select>
+  <select id="stateFilter" onchange="applyFilters()"></select>
+  <select id="sortCol" onchange="applySort()"></select>
+  <button class="btn btn-sm" id="sortDirBtn" onclick="toggleDir()">▲ ASC</button>
+  <button class="btn btn-muted btn-sm" data-i18n="btn_reset" onclick="resetFilters()"></button>
+</div>
+
+<div class="colbar" id="colbar">
+  <span class="lbl" data-i18n="col_label"></span>
+  <span class="ct on" data-col="domain"       onclick="toggleCol(this)" data-i18n="col_domain"></span>
+  <span class="ct on" data-col="entity_id"    onclick="toggleCol(this)">Entity ID</span>
+  <span class="ct on" data-col="name"         onclick="toggleCol(this)" data-i18n="col_name"></span>
+  <span class="ct on" data-col="state"        onclick="toggleCol(this)" data-i18n="col_state"></span>
+  <span class="ct on" data-col="unit"         onclick="toggleCol(this)" data-i18n="col_unit"></span>
+  <span class="ct on" data-col="last_changed" onclick="toggleCol(this)" data-i18n="col_last_changed"></span>
+  <span class="ct on" data-col="last_updated" onclick="toggleCol(this)" data-i18n="col_last_updated"></span>
+  <span class="ct on" data-col="device_class" onclick="toggleCol(this)">Device class</span>
+  <span class="ct on" data-col="attributes"   onclick="toggleCol(this)" data-i18n="col_attributes"></span>
+</div>
+
+<div class="errbox" id="errbox"></div>
+<div class="loading" id="loading"><div class="spin"></div><p data-i18n="loading_text"></p></div>
+
+<div class="table-wrap" id="tableWrap">
+  <div class="empty">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
+    </svg>
+    <p data-i18n="empty_title"></p>
+    <small data-i18n="empty_subtitle"></small>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════════
+//  TRADUCTIONS
+// ══════════════════════════════════════════════════════════════════
+var LANGS = {
+  fr: {
+    subtitle:           'Récolte et export des entités — Excel / CSV / JSON',
+    btn_load:           '⟳ Charger',
+    btn_reset:          '✕ Réinitialiser',
+    btn_save_title:     'Mémoriser',
+    btn_excel_filtered: '📥 Excel (filtrés)',
+    btn_excel_all:      '📥 Excel (tout)',
+    url_label:          'URL Home Assistant',
+    url_placeholder:    'http://homeassistant.local:8123',
+    token_label:        'Token d\'accès longue durée',
+    token_placeholder:  'eyJ0eXAiOiJKV1Qi…',
+    search_placeholder: '🔍 Rechercher…',
+    col_label:          'Colonnes :',
+    col_domain:         'Domaine',
+    col_name:           'Nom',
+    col_state:          'État',
+    col_unit:           'Unité',
+    col_last_changed:   'Dernier chgt',
+    col_last_updated:   'Dernière MAJ',
+    col_attributes:     'Attributs',
+    th_domain:          'Domaine',
+    th_name:            'Nom',
+    th_state:           'État',
+    th_unit:            'Unité',
+    th_last_changed:    'Dernier changement',
+    th_last_updated:    'Dernière MAJ',
+    th_device_class:    'Device class',
+    th_attributes:      'Attributs',
+    all_domains:        'Tous les domaines',
+    all_states:         'Tous les états',
+    sort_entity_id:     'Trier : Entity ID',
+    sort_domain:        'Trier : Domaine',
+    sort_name:          'Trier : Nom',
+    sort_state:         'Trier : État',
+    sort_last_changed:  'Trier : Dernier changement',
+    stat_total:         'total',
+    stat_displayed:     'affichés',
+    stat_unavailable:   'indisponibles',
+    stat_filtered_of:   'filtrés /',
+    stat_total_lbl:     'total',
+    loaded_at:          'Chargé à',
+    loading_text:       'Chargement des entités…',
+    empty_title:        'Aucune entité chargée',
+    empty_subtitle:     'Chargement automatique en cours…',
+    no_results:         'Aucun résultat',
+    err_url_token:      'URL et token requis.',
+    err_prefix:         'Erreur : ',
+    auth_auto:          '🟢 Auto-connecté',
+    auth_manual:        '🟡 Token manuel',
+    auth_required:      '🔴 Token requis',
+    auth_failed:        '🔴 Échec connexion',
+    creds_saved:        'Identifiants mémorisés',
+    xl_entities:        'Entités',
+    xl_summary:         'Résumé',
+    xl_domain:          'Domaine',
+    xl_name:            'Nom',
+    xl_state:           'État',
+    xl_unit:            'Unité',
+    xl_device_class:    'Device class',
+    xl_last_changed:    'Dernier changement',
+    xl_last_updated:    'Dernière MAJ',
+    xl_total:           'Total',
+    xl_unavailable:     'Indisponibles',
+  },
+  en: {
+    subtitle:           'Harvest and export entities — Excel / CSV / JSON',
+    btn_load:           '⟳ Load',
+    btn_reset:          '✕ Reset',
+    btn_save_title:     'Save credentials',
+    btn_excel_filtered: '📥 Excel (filtered)',
+    btn_excel_all:      '📥 Excel (all)',
+    url_label:          'Home Assistant URL',
+    url_placeholder:    'http://homeassistant.local:8123',
+    token_label:        'Long-lived access token',
+    token_placeholder:  'eyJ0eXAiOiJKV1Qi…',
+    search_placeholder: '🔍 Search…',
+    col_label:          'Columns:',
+    col_domain:         'Domain',
+    col_name:           'Name',
+    col_state:          'State',
+    col_unit:           'Unit',
+    col_last_changed:   'Last changed',
+    col_last_updated:   'Last updated',
+    col_attributes:     'Attributes',
+    th_domain:          'Domain',
+    th_name:            'Name',
+    th_state:           'State',
+    th_unit:            'Unit',
+    th_last_changed:    'Last changed',
+    th_last_updated:    'Last updated',
+    th_device_class:    'Device class',
+    th_attributes:      'Attributes',
+    all_domains:        'All domains',
+    all_states:         'All states',
+    sort_entity_id:     'Sort: Entity ID',
+    sort_domain:        'Sort: Domain',
+    sort_name:          'Sort: Name',
+    sort_state:         'Sort: State',
+    sort_last_changed:  'Sort: Last changed',
+    stat_total:         'total',
+    stat_displayed:     'displayed',
+    stat_unavailable:   'unavailable',
+    stat_filtered_of:   'filtered /',
+    stat_total_lbl:     'total',
+    loaded_at:          'Loaded at',
+    loading_text:       'Loading entities…',
+    empty_title:        'No entities loaded',
+    empty_subtitle:     'Auto-loading…',
+    no_results:         'No results',
+    err_url_token:      'URL and token are required.',
+    err_prefix:         'Error: ',
+    auth_auto:          '🟢 Auto-connected',
+    auth_manual:        '🟡 Manual token',
+    auth_required:      '🔴 Token required',
+    auth_failed:        '🔴 Connection failed',
+    creds_saved:        'Credentials saved',
+    xl_entities:        'Entities',
+    xl_summary:         'Summary',
+    xl_domain:          'Domain',
+    xl_name:            'Name',
+    xl_state:           'State',
+    xl_unit:            'Unit',
+    xl_device_class:    'Device class',
+    xl_last_changed:    'Last changed',
+    xl_last_updated:    'Last updated',
+    xl_total:           'Total',
+    xl_unavailable:     'Unavailable',
+  }
+};
+
+// ══════════════════════════════════════════════════════════════════
+//  DÉTECTION & APPLICATION DE LA LANGUE
+// ══════════════════════════════════════════════════════════════════
+var currentLang = 'en';
+
+function detectLang() {
+  // 1. Préférence mémorisée par l'utilisateur
+  var saved = localStorage.getItem('harvest_lang');
+  if (saved && LANGS[saved]) return saved;
+
+  // 2. Langue HA (selectedLanguage dans le localStorage HA)
+  var haLang = localStorage.getItem('selectedLanguage');
+  if (haLang) {
+    var code = haLang.split('-')[0].toLowerCase();
+    if (LANGS[code]) return code;
+  }
+
+  // 3. Langue du navigateur
+  var nav = (navigator.language || navigator.userLanguage || 'en').split('-')[0].toLowerCase();
+  return LANGS[nav] ? nav : 'en';
+}
+
+function t(key) {
+  return (LANGS[currentLang] && LANGS[currentLang][key]) || (LANGS['en'][key]) || key;
+}
+
+function applyLang(lang) {
+  currentLang = lang;
+  document.documentElement.lang = lang;
+
+  // Textes statiques data-i18n
+  document.querySelectorAll('[data-i18n]').forEach(function(el) {
+    el.textContent = t(el.getAttribute('data-i18n'));
+  });
+
+  // Placeholders data-i18n-placeholder
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(function(el) {
+    el.placeholder = t(el.getAttribute('data-i18n-placeholder'));
+  });
+
+  // Bouton mémoriser
+  document.getElementById('btnSave').title   = t('btn_save_title');
+  document.getElementById('btnSave').textContent = '💾';
+
+  // Boutons de langue actifs
+  document.getElementById('btnFR').className = 'lang-btn' + (lang === 'fr' ? ' active' : '');
+  document.getElementById('btnEN').className = 'lang-btn' + (lang === 'en' ? ' active' : '');
+
+  // Listes déroulantes du toolbar (reconstruites à la langue)
+  buildStateFilter();
+  buildSortSelect();
+
+  // Si des données sont chargées, re-render le filtre domaine et le tableau
+  if (all.length) {
+    buildDomainFilter();
+    renderTable();
+    updateStats();
+  }
+}
+
+function setLang(lang) {
+  localStorage.setItem('harvest_lang', lang);
+  applyLang(lang);
+}
+
+function buildStateFilter() {
+  var sel = document.getElementById('stateFilter');
+  var cur = sel.value;
+  sel.innerHTML =
+    '<option value="">'         + t('all_states')  + '</option>' +
+    '<option value="on">on</option>'                              +
+    '<option value="off">off</option>'                            +
+    '<option value="unavailable">unavailable</option>'            +
+    '<option value="unknown">unknown</option>';
+  sel.value = cur;
+}
+
+function buildSortSelect() {
+  var sel = document.getElementById('sortCol');
+  var cur = sel.value;
+  sel.innerHTML =
+    '<option value="entity_id">'   + t('sort_entity_id')   + '</option>' +
+    '<option value="domain">'      + t('sort_domain')      + '</option>' +
+    '<option value="name">'        + t('sort_name')        + '</option>' +
+    '<option value="state">'       + t('sort_state')       + '</option>' +
+    '<option value="last_changed">'+ t('sort_last_changed')+ '</option>';
+  sel.value = cur || 'entity_id';
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  ÉTAT GLOBAL
+// ══════════════════════════════════════════════════════════════════
+var all = [], filtered = [];
+var sortDir = 1;
+var visCols = ['domain','entity_id','name','state','unit','last_changed','last_updated','device_class','attributes'];
+
+function colDefs() {
+  return [
+    {k:'domain',       l: t('th_domain')},
+    {k:'entity_id',    l: 'Entity ID'},
+    {k:'name',         l: t('th_name')},
+    {k:'state',        l: t('th_state')},
+    {k:'unit',         l: t('th_unit')},
+    {k:'last_changed', l: t('th_last_changed')},
+    {k:'last_updated', l: t('th_last_updated')},
+    {k:'device_class', l: t('th_device_class')},
+    {k:'attributes',   l: t('th_attributes')},
+  ];
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  AUTO-AUTH HA
+// ══════════════════════════════════════════════════════════════════
+function autoAuth() {
+  document.getElementById('haUrl').value = window.location.origin;
+  try {
+    var raw = localStorage.getItem('hassTokens');
+    if (raw) {
+      var tk = JSON.parse(raw);
+      if (tk.access_token && tk.expires > Date.now()) {
+        document.getElementById('haToken').value = tk.access_token;
+        setAuthChip(t('auth_auto'));
+        document.getElementById('connectPanel').style.display = 'none';
+        return true;
+      }
+    }
+  } catch(e) {}
+
+  var su = localStorage.getItem('ha_url');
+  var st = localStorage.getItem('ha_token');
+  if (su) document.getElementById('haUrl').value = su;
+  if (st) document.getElementById('haToken').value = st;
+  if (su && st) { setAuthChip(t('auth_manual')); return true; }
+
+  setAuthChip(t('auth_required'));
+  return false;
+}
+
+function setAuthChip(msg) {
+  var chip = document.getElementById('authChip');
+  chip.textContent = msg;
+  chip.className = 'chip' +
+    (msg.includes('🟢') ? ' ok' : msg.includes('🔴') ? ' warn' : ' warn');
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', function() {
+  currentLang = detectLang();
+  applyLang(currentLang);
+
+  var ready = autoAuth();
+  ['haUrl','haToken'].forEach(function(id) {
+    document.getElementById(id).addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') loadEntities();
+    });
+  });
+  if (ready) loadEntities();
+});
+
+function saveCreds() {
+  localStorage.setItem('ha_url',   document.getElementById('haUrl').value.trim());
+  localStorage.setItem('ha_token', document.getElementById('haToken').value.trim());
+  toast(t('creds_saved'));
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  CHARGEMENT
+// ══════════════════════════════════════════════════════════════════
+function loadEntities() {
+  var url   = document.getElementById('haUrl').value.trim().replace(/\/+$/, '');
+  var token = document.getElementById('haToken').value.trim();
+  if (!url || !token) { showErr(t('err_url_token')); return; }
+
+  hideErr();
+  setLoading(true);
+  document.getElementById('tableWrap').innerHTML = '';
+
+  fetch(url + '/api/states', {
+    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }
+  })
+  .then(function(r) {
+    if (!r.ok) return r.text().then(function(tx) { throw new Error('HTTP ' + r.status + ' — ' + tx.slice(0,120)); });
+    return r.json();
+  })
+  .then(function(data) {
+    all = data;
+    buildDomainFilter();
+    document.getElementById('tsFetch').textContent =
+      t('loaded_at') + ' ' + new Date().toLocaleTimeString(currentLang === 'fr' ? 'fr-FR' : 'en-GB');
+    ['statusBar','toolbar','colbar'].forEach(function(id) {
+      document.getElementById(id).style.display = 'flex';
+    });
+    applyFilters();
+  })
+  .catch(function(e) {
+    showErr(t('err_prefix') + e.message);
+    setAuthChip(t('auth_failed'));
+  })
+  .finally(function() { setLoading(false); });
+}
+
+function buildDomainFilter() {
+  var domains = [...new Set(all.map(function(e) { return e.entity_id.split('.')[0]; }))].sort();
+  var sel = document.getElementById('domainFilter');
+  var cur = sel.value;
+  sel.innerHTML = '<option value="">' + t('all_domains') + '</option>';
+  domains.forEach(function(d) {
+    var n = all.filter(function(e) { return e.entity_id.startsWith(d + '.'); }).length;
+    sel.innerHTML += '<option value="' + d + '">' + d + ' (' + n + ')</option>';
+  });
+  sel.value = cur;
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  FILTRES / TRI
+// ══════════════════════════════════════════════════════════════════
+function applyFilters() {
+  var q   = document.getElementById('searchInput').value.toLowerCase();
+  var dom = document.getElementById('domainFilter').value;
+  var st  = document.getElementById('stateFilter').value;
+  filtered = all.filter(function(e) {
+    if (dom && e.entity_id.split('.')[0] !== dom) return false;
+    if (st  && e.state !== st) return false;
+    if (q) {
+      var hay = e.entity_id + ' ' + e.state + ' ' + (e.attributes.friendly_name||'') + ' ' + JSON.stringify(e.attributes);
+      if (!hay.toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
+  applySort();
+}
+
+function applySort() {
+  var sc = document.getElementById('sortCol').value;
+  filtered.sort(function(a, b) {
+    var va = colVal(a, sc), vb = colVal(b, sc);
+    return va < vb ? -sortDir : va > vb ? sortDir : 0;
+  });
+  updateStats();
+  renderTable();
+}
+
+function toggleDir() {
+  sortDir *= -1;
+  document.getElementById('sortDirBtn').textContent = sortDir === 1 ? '▲ ASC' : '▼ DESC';
+  applySort();
+}
+
+function resetFilters() {
+  document.getElementById('searchInput').value = '';
+  document.getElementById('domainFilter').value = '';
+  document.getElementById('stateFilter').value = '';
+  applyFilters();
+}
+
+function colVal(e, col) {
+  switch(col) {
+    case 'domain':       return e.entity_id.split('.')[0];
+    case 'entity_id':    return e.entity_id;
+    case 'name':         return (e.attributes.friendly_name||'').toLowerCase();
+    case 'state':        return e.state;
+    case 'last_changed': return e.last_changed||'';
+    case 'last_updated': return e.last_updated||'';
+    default:             return '';
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  STATS
+// ══════════════════════════════════════════════════════════════════
+function updateStats() {
+  var on  = all.filter(function(e) { return e.state==='on'; }).length;
+  var off = all.filter(function(e) { return e.state==='off'; }).length;
+  var una = all.filter(function(e) { return e.state==='unavailable'; }).length;
+  setText('sTotal', all.length + ' ' + t('stat_total'));
+  setText('sVis',   filtered.length + ' ' + t('stat_displayed'));
+  setText('sOn',    on  + ' on');
+  setText('sOff',   off + ' off');
+  setText('sUna',   una + ' ' + t('stat_unavailable'));
+  document.getElementById('exportCount').textContent =
+    filtered.length + ' ' + t('stat_filtered_of') + ' ' + all.length + ' ' + t('stat_total_lbl');
+}
+function setText(id, txt) {
+  var el = document.getElementById(id);
+  var dot = el.querySelector('.dot');
+  el.textContent = txt;
+  if (dot) el.prepend(dot);
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  COLONNES
+// ══════════════════════════════════════════════════════════════════
+function toggleCol(el) {
+  el.classList.toggle('on');
+  var col = el.dataset.col;
+  if (el.classList.contains('on')) { if (!visCols.includes(col)) visCols.push(col); }
+  else visCols = visCols.filter(function(c) { return c !== col; });
+  renderTable();
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  TABLEAU
+// ══════════════════════════════════════════════════════════════════
+function renderTable() {
+  var cols = colDefs().filter(function(c) { return visCols.includes(c.k); });
+  var html = '<table><thead><tr>';
+  cols.forEach(function(c) { html += '<th>' + c.l + '</th>'; });
+  html += '</tr></thead><tbody>';
+  if (!filtered.length) {
+    html += '<tr><td colspan="' + cols.length + '" style="text-align:center;padding:40px;color:#475569">' + t('no_results') + '</td></tr>';
+  } else {
+    filtered.forEach(function(e) {
+      var dom = e.entity_id.split('.')[0];
+      html += '<tr>';
+      cols.forEach(function(c) { html += '<td>' + cellHtml(e, c.k, dom) + '</td>'; });
+      html += '</tr>';
+    });
+  }
+  html += '</tbody></table>';
+  document.getElementById('tableWrap').innerHTML = html;
+}
+
+function cellHtml(e, col, dom) {
+  switch(col) {
+    case 'domain':      return '<span class="dom d-' + dom + '">' + dom + '</span>';
+    case 'entity_id':   return '<span class="eid">' + esc(e.entity_id) + '</span>';
+    case 'name':        return esc(e.attributes.friendly_name || '—');
+    case 'state':
+      var cls = ['on','off','unavailable','unknown'].includes(e.state) ? 's-'+e.state : 's-other';
+      return '<span class="sc ' + cls + '">' + esc(e.state) + '</span>';
+    case 'unit':         return esc(e.attributes.unit_of_measurement || '');
+    case 'last_changed': return fmtDate(e.last_changed);
+    case 'last_updated': return fmtDate(e.last_updated);
+    case 'device_class': return esc(e.attributes.device_class || '');
+    case 'attributes':   return renderAttrs(e.attributes);
+    default: return '';
+  }
+}
+
+var SKIP = ['friendly_name','unit_of_measurement','device_class','icon','entity_picture'];
+function renderAttrs(attrs) {
+  var keys = Object.keys(attrs).filter(function(k) { return !SKIP.includes(k); }).slice(0,10);
+  if (!keys.length) return '<span style="color:#475569">—</span>';
+  return keys.map(function(k) {
+    var v = attrs[k];
+    var vs = typeof v === 'object' ? JSON.stringify(v) : String(v);
+    return '<span class="atag" title="' + esc(k+': '+vs) + '">' + esc(k+': '+vs.slice(0,40)+(vs.length>40?'…':'')) + '</span>';
+  }).join('');
+}
+
+function fmtDate(iso) {
+  if (!iso) return '';
+  try {
+    return new Date(iso).toLocaleString(currentLang === 'fr' ? 'fr-FR' : 'en-GB', {
+      day:'2-digit', month:'2-digit', year:'numeric',
+      hour:'2-digit', minute:'2-digit', second:'2-digit'
+    });
+  } catch(e) { return iso; }
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  EXPORTS
+// ══════════════════════════════════════════════════════════════════
+function flattenEntity(e) {
+  var row = {};
+  row[t('xl_domain')]       = e.entity_id.split('.')[0];
+  row['Entity ID']          = e.entity_id;
+  row[t('xl_name')]         = e.attributes.friendly_name || '';
+  row[t('xl_state')]        = e.state;
+  row[t('xl_unit')]         = e.attributes.unit_of_measurement || '';
+  row[t('xl_device_class')] = e.attributes.device_class || '';
+  row[t('xl_last_changed')] = e.last_changed ? new Date(e.last_changed).toLocaleString(currentLang==='fr'?'fr-FR':'en-GB') : '';
+  row[t('xl_last_updated')] = e.last_updated ? new Date(e.last_updated).toLocaleString(currentLang==='fr'?'fr-FR':'en-GB') : '';
+  Object.keys(e.attributes).forEach(function(k) {
+    if (SKIP.includes(k)) return;
+    var v = e.attributes[k];
+    row['attr_' + k] = typeof v === 'object' ? JSON.stringify(v) : v;
+  });
+  return row;
+}
+
+function exportExcel(scope) {
+  var data = scope === 'all' ? all : filtered;
+  if (!data.length) return;
+  var wb = XLSX.utils.book_new();
+
+  var rows = data.map(flattenEntity);
+  var ws = XLSX.utils.json_to_sheet(rows);
+  autoWidth(ws, rows);
+  XLSX.utils.book_append_sheet(wb, ws, t('xl_entities'));
+
+  var domains = [...new Set(data.map(function(e) { return e.entity_id.split('.')[0]; }))].sort();
+  var summary = domains.map(function(d) {
+    var sub = data.filter(function(e) { return e.entity_id.startsWith(d+'.'); });
+    var row = {};
+    row[t('xl_domain')]      = d;
+    row['Total']             = sub.length;
+    row['ON']                = sub.filter(function(e){return e.state==='on';}).length;
+    row['OFF']               = sub.filter(function(e){return e.state==='off';}).length;
+    row[t('xl_unavailable')] = sub.filter(function(e){return e.state==='unavailable';}).length;
+    return row;
+  });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summary), t('xl_summary'));
+
+  domains.forEach(function(d) {
+    var sub = data.filter(function(e) { return e.entity_id.startsWith(d+'.'); }).map(flattenEntity);
+    var dws = XLSX.utils.json_to_sheet(sub);
+    autoWidth(dws, sub);
+    XLSX.utils.book_append_sheet(wb, dws, d.slice(0,31));
+  });
+
+  XLSX.writeFile(wb, 'harvest_' + stamp() + '.xlsx');
+}
+
+function autoWidth(ws, rows) {
+  if (!rows.length) return;
+  var keys = Object.keys(rows[0]);
+  ws['!cols'] = keys.map(function(k) {
+    var max = k.length;
+    rows.forEach(function(r) { var v = String(r[k]||''); if (v.length>max) max=v.length; });
+    return { wch: Math.min(max+2, 50) };
+  });
+}
+
+function exportCSV() {
+  var data = filtered.map(flattenEntity);
+  if (!data.length) return;
+  var sep = currentLang === 'fr' ? ';' : ',';
+  var headers = Object.keys(data[0]);
+  var lines = [headers.join(sep)].concat(data.map(function(r) {
+    return headers.map(function(h) { return '"' + String(r[h]||'').replace(/"/g,'""') + '"'; }).join(sep);
+  }));
+  download('﻿' + lines.join('\r\n'), 'harvest_' + stamp() + '.csv', 'text/csv;charset=utf-8');
+}
+
+function exportJSON() {
+  if (!filtered.length) return;
+  download(JSON.stringify(filtered, null, 2), 'harvest_' + stamp() + '.json', 'application/json');
+}
+
+function download(content, filename, mime) {
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([content], {type: mime}));
+  a.download = filename;
+  a.click();
+  setTimeout(function() { URL.revokeObjectURL(a.href); }, 1000);
+}
+
+function stamp() { return new Date().toISOString().slice(0,19).replace(/[T:]/g,'-'); }
+
+// ══════════════════════════════════════════════════════════════════
+//  UI HELPERS
+// ══════════════════════════════════════════════════════════════════
+function setLoading(v) { document.getElementById('loading').style.display = v ? 'block' : 'none'; }
+function showErr(msg)  { var el=document.getElementById('errbox'); el.innerHTML='⚠️ '+msg; el.style.display='block'; }
+function hideErr()     { document.getElementById('errbox').style.display='none'; }
+function toast(msg) {
+  var t = document.createElement('div');
+  t.className='toast'; t.textContent=msg;
+  document.body.appendChild(t);
+  setTimeout(function(){t.remove();}, 2400);
+}
+</script>
+</body>
+</html>
