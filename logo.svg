@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e40af"/>
+      <stop offset="100%" style="stop-color:#7c3aed"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Fond arrondi -->
+  <rect width="100" height="100" rx="22" ry="22" fill="url(#bg)"/>
+
+  <!-- Maison -->
+  <polygon points="50,18 20,42 80,42" fill="none" stroke="white" stroke-width="4" stroke-linejoin="round"/>
+  <rect x="27" y="42" width="46" height="32" rx="2" fill="none" stroke="white" stroke-width="4"/>
+  <rect x="42" y="54" width="16" height="20" rx="2" fill="white" opacity="0.9"/>
+
+  <!-- Petite pousse / feuille -->
+  <path d="M50 46 Q58 38 66 40 Q60 50 50 46Z" fill="#4ade80" opacity="0.95"/>
+  <line x1="50" y1="46" x2="50" y2="52" stroke="#4ade80" stroke-width="2"/>
+</svg>
