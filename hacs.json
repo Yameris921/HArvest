@@ -1,5 +1,6 @@
 {
   "name": "HArvest",
   "category": "integration",
-  "render_readme": true
+  "render_readme": true,
+  "homeassistant": "2023.1.0"
 }
